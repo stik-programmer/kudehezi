@@ -2,17 +2,24 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><%= title %></title>
-  <link rel="stylesheet" href="/style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/v4-shims.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <link rel="stylesheet" href="/style.css" />
+ 
 </head>
 
 <body>
- <div class="logout-container">
-    <a href="/logout" class="logout-btn">Cerrar sesión</a>
- </div>
+  <div class="user-info">
+    <span>Bienvenido, <%= user.name || user.username %></span>
+    <a href="/logout" class="logout-btn">
+      <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+    </a>
+  </div>
+
   <div class="sidebar">
     <a href="/panel" class="icon <%= activePage === 'panel' ? 'active' : '' %>">
       <i class="fas fa-table"></i>
@@ -28,41 +35,56 @@
   <div class="main-content">
     <div class="header">
       <h1>Kudehezi</h1>
-     
-      <button id="addAccionBtn"><i class="fas fa-plus"></i> Añadir Acción</button>
+      <button id="addAccionBtn" class="btn-primary">
+        <i class="fas fa-plus"></i> Añadir Acción
+      </button>
     </div>
-     
+
     <div class="view-toggle">
-      <button class="active" id="tableViewBtn"><i class="fas fa-table"></i> Vista Tabla</button>
-      <button id="calendarViewBtn"><i class="fas fa-calendar-alt"></i> Vista Calendario</button>
+      <button class="active" id="tableViewBtn">
+        <i class="fas fa-table"></i> Vista Tabla
+      </button>
+      <button id="calendarViewBtn">
+        <i class="fas fa-calendar-alt"></i> Vista Calendario
+      </button>
     </div>
 
     <div class="search-filters">
       <div class="filter-group">
-        <label for="searchInput">Buscar</label>
+        <label for="searchInput">
+          <i class="fas fa-search"></i> Buscar
+        </label>
         <input type="text" id="searchInput" placeholder="Nombre, email o entidad...">
       </div>
       
       <div class="filter-group">
-        <label for="tipoFilter">Tipo de acción</label>
+        <label for="tipoFilter">
+          <i class="fas fa-tag"></i> Tipo
+        </label>
         <select id="tipoFilter">
           <option value="">Todos</option>
         </select>
       </div>
       
       <div class="filter-group">
-        <label for="estadoFilter">Estado</label>
+        <label for="estadoFilter">
+          <i class="fas fa-info-circle"></i> Estado
+        </label>
         <select id="estadoFilter">
           <option value="">Todos</option>
         </select>
       </div>
       
       <div class="filter-actions">
-        <button class="apply" id="applyFilters"><i class="fas fa-filter"></i> Filtrar</button>
-        <button class="reset" id="resetFilters"><i class="fas fa-redo"></i> Resetear</button>
+        <button class="apply" id="applyFilters">
+          <i class="fas fa-filter"></i> Filtrar
+        </button>
+        <button class="reset" id="resetFilters">
+          <i class="fas fa-redo"></i> Resetear
+        </button>
       </div>
       
-      <button class="export-btn" id="exportBtn">
+      <button class="export-btn" id="exportBtn" title="Exportar a CSV">
         <i class="fas fa-file-export"></i> Exportar
       </button>
     </div>
@@ -72,7 +94,6 @@
         <table id="accionesTable">
           <thead>
             <tr>
-              <p>Tabla De Acciones</p>
               <th><div class="table-header" data-sort="nombre">Nombre <span class="sort-icon"></span></div></th>
               <th><div class="table-header" data-sort="asociacionEntidad">Entidad <span class="sort-icon"></span></div></th>
               <th><div class="table-header" data-sort="email">Email <span class="sort-icon"></span></div></th>
@@ -83,7 +104,7 @@
               <th>Horarios</th>
               <th>Responsables</th>
               <th><div class="table-header" data-sort="estado">Estado <span class="sort-icon"></span></div></th>
-              <th>Fecha Inserción</th>
+              <th><div class="table-header" data-sort="fechaInsercion">Inserción <span class="sort-icon"></span></div></th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -98,88 +119,115 @@
       </div>
     </div>
 
-    <div class="calendar-view" id="calendarView">
+    <div class="calendar-view" id="calendarView" style="display: none;">
       <div id="calendar"></div>
     </div>
   </div>
 
-  <!-- Modal -->
-  <div class="modal" id="accionModal">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <h2 id="modalTitle">Nueva Acción</h2>
-      <form id="accionForm">
-        <div class="form-group">
-          <label for="nombre">Nombre</label>
-          <input type="text" id="nombre" name="nombre" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="asociacionEntidad">Entidad</label>
-          <input type="text" id="asociacionEntidad" name="asociacionEntidad">
-        </div>
-        
-        <div class="form-group">
-          <label for="email">Email</label>
-          <input type="email" id="email" name="email" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="telefono">Teléfono</label>
-          <input type="tel" id="telefono" name="telefono">
-        </div>
-        
-        <div class="form-group">
-          <label for="fechaInicio">Fecha Inicio</label>
-          <input type="date" id="fechaInicio" name="fechaInicio" required>
-        </div>
-        
-        <div class="form-group">
-          <label for="fechaFin">Fecha Fin</label>
-          <input type="date" id="fechaFin" name="fechaFin">
-        </div>
-        
-        <div class="form-group">
-          <label for="tipoAccion">Tipo Acción</label>
-          <select id="tipoAccion" name="tipoAccion" required>
-            <option value="">Seleccione...</option>
-            <option value="Voluntariado">Voluntariado</option>
-            <option value="Donación">Donación</option>
-            <option value="Evento">Evento</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="estado">Estado</label>
-          <select id="estado" name="estado">
-            <option value="Pendiente">Pendiente</option>
-            <option value="En curso">En curso</option>
-            <option value="Completado">Completado</option>
-            <option value="Cancelado">Cancelado</option>
-          </select>
-        </div>
-        
-        <fieldset>
-          <legend>Horario</legend>
-          <div class="horarios">
-            <label><input type="checkbox" name="horario" value="Mañana"> Mañana</label>
-            <label><input type="checkbox" name="horario" value="Tarde"> Tarde</label>
-            <label><input type="checkbox" name="horario" value="Noche"> Noche</label>
+ 
+    <div class="modal" id="accionModal" style="display: none;">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2 id="modalTitle">Nueva Acción</h2>
+        <form id="accionForm" class="add-accion-form">
+          <div class="form-group">
+            <label for="nombre">Nombre *</label>
+            <input type="text" id="nombre" name="nombre" required>
           </div>
-        </fieldset>
-        
-        <fieldset>
-          <legend>Responsables</legend>
-          <div class="horarios">
-            <label><input type="checkbox" name="responsableAccion" value="Saregune"> Saregune</label>
-            <label><input type="checkbox" name="responsableAccion" value="Elkarteak"> Elkarteak</label>
-            <label><input type="checkbox" name="responsableAccion" value="Batekin"> Batekin</label>
-            <label><input type="checkbox" name="responsableAccion" value="Voluntario"> AuzoTV</label>
+          
+          <div class="form-group">
+            <label for="asociacionEntidad">Entidad</label>
+            <input type="text" id="asociacionEntidad" name="asociacionEntidad">
           </div>
-        </fieldset>
-        
-        <button type="submit" class="submit-btn">Guardar</button>
-      </form>
+
+          <div class="form-group">
+            <label for="email">Email *</label>
+            <input type="email" id="email" name="email" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="telefono">Teléfono</label>
+            <input type="tel" id="telefono" name="telefono">
+          </div>
+
+          <div class="form-group">
+            <label for="fechaInicio">Fecha Inicio *</label>
+            <input type="date" id="fechaInicio" name="fechaInicio" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="fechaFin">Fecha Fin</label>
+            <input type="date" id="fechaFin" name="fechaFin">
+          </div>
+
+          <div class="form-group">
+            <label for="tipoAccion">Tipo Acción *</label>
+            <select id="tipoAccion" name="tipoAccion" required>
+              <option value="">Seleccione...</option>
+              <option value="Voluntariado">Voluntariado</option>
+              <option value="Donación">Donación</option>
+              <option value="Evento">Evento</option>
+              <option value="Taller">Taller</option>
+              <option value="Formación">Formación</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="estado">Estado</label>
+            <select id="estado" name="estado">
+              <option value="Pendiente">Pendiente</option>
+              <option value="En curso">En curso</option>
+              <option value="Completado">Completado</option>
+              <option value="Cancelado">Cancelado</option>
+            </select>
+          </div>
+
+          <fieldset>
+            <legend>Horario</legend>
+            <div class="checkbox-group horarios">
+              <label class="checkbox-label">
+                <input type="checkbox" name="horario" value="Mañana">
+                <span>Mañana</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="horario" value="Tarde">
+                <span>Tarde</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="horario" value="Noche">
+                <span>Noche</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Responsables</legend>
+            <div class="checkbox-group responsables">
+              <label class="checkbox-label">
+                <input type="checkbox" name="responsableAccion" value="Saregune">
+                <span>Saregune</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="responsableAccion" value="Elkarteak">
+                <span>Elkarteak</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="responsableAccion" value="Batekin">
+                <span>Batekin</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" name="responsableAccion" value="AuzoTV">
+                <span>AuzoTV</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+            <button type="submit" class="btn-primary">Guardar</button>
+          </div>
+        </form>
+      </div>
     </div>
   </div>
 

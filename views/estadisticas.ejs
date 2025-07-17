@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/style.css" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <div class="sidebar">
+    <a href="/panel" class="icon <%= activePage === 'panel' ? 'active' : '' %>">
+      <i class="fa-solid fa-table"></i>
+    </a>
+    <a href="/estadisticas" class="icon <%= activePage === 'estadisticas' ? 'active' : '' %>">
+      <i class="fa-solid fa-chart-bar"></i>
+    </a>
+    <a href="/configuracion" class="icon <%= activePage === 'configuracion' ? 'active' : '' %>">
+      <i class="fa-solid fa-cog"></i>
+    </a>
+  </div>
+
+  <div class="main-content">
+    <h1 style="text-align: center; font-size: 2.5em; color: #b3e5ff; margin-bottom: 40px;">
+      Estadísticas de Acciones
+    </h1>
+
+    <section class="stats-section">
+      <h2 style="text-align: center; font-size: 1.8em; margin-bottom: 20px; color: #d6b3ff;">
+        Acciones por Estado
+      </h2>
+      <canvas id="estadoChart" style="max-width: 500px; max-height: 500px; margin: 0 auto; display: block;"></canvas>
+    </section>
+
+    <section class="stats-section">
+      <h2 style="text-align: center; font-size: 1.8em; margin: 40px 0 20px; color: #d6b3ff;">
+        Acciones por Tipo
+      </h2>
+      <canvas id="tipoChart" style="max-width: 700px; max-height: 400px; margin: 0 auto; display: block;"></canvas>
+    </section>
+  </div>
+
+  <script>
+    const ctxEstado = document.getElementById('estadoChart').getContext('2d');
+    const ctxTipo = document.getElementById('tipoChart').getContext('2d');
+
+    let estadoChart = null;
+    let tipoChart = null;
+
+    async function fetchEstadisticas() {
+      try {
+        const res = await fetch('/api/estadisticas');
+        const data = await res.json();
+
+        const estadosLabels = data.estados.map(e => e._id || 'Sin estado');
+        const estadosCounts = data.estados.map(e => e.count);
+
+        const tiposLabels = data.tipos.map(t => t._id || 'Sin tipo');
+        const tiposCounts = data.tipos.map(t => t.count);
+
+        if (!estadoChart) {
+          estadoChart = new Chart(ctxEstado, {
+            type: 'doughnut',
+            data: {
+              labels: estadosLabels,
+              datasets: [{
+                label: 'Acciones por Estado',
+                data: estadosCounts,
+                backgroundColor: [
+                  '#b3e5ff',
+                  '#b2ffd6',
+                  '#d6b3ff',
+                  '#ff6f91',
+                  '#6c757d'
+                ].slice(0, estadosLabels.length),
+                borderColor: '#1a2a2f',
+                borderWidth: 2,
+              }]
+            },
+            options: {
+              responsive: true,
+              cutout: '55%',
+              plugins: {
+                legend: {
+                  position: 'bottom',
+                  labels: {
+                    color: '#b3e5ff',
+                    font: { size: 16 }
+                  }
+                },
+                tooltip: {
+                  backgroundColor: '#252836',
+                  titleColor: '#b2ffd6',
+                  bodyColor: '#ffffff',
+                  borderColor: '#b3e5ff',
+                  borderWidth: 1,
+                }
+              }
+            }
+          });
+        } else {
+          estadoChart.data.labels = estadosLabels;
+          estadoChart.data.datasets[0].data = estadosCounts;
+          estadoChart.data.datasets[0].backgroundColor = [
+            '#b3e5ff', '#b2ffd6', '#d6b3ff', '#ff6f91', '#6c757d'
+          ].slice(0, estadosLabels.length);
+          estadoChart.update();
+        }
+
+        if (!tipoChart) {
+          tipoChart = new Chart(ctxTipo, {
+            type: 'bar',
+            data: {
+              labels: tiposLabels,
+              datasets: [{
+                label: 'Acciones por Tipo',
+                data: tiposCounts,
+                backgroundColor: '#6f42c1',
+                borderWidth: 1
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: true,
+                  ticks: {
+                    color: '#b3e5ff',
+                    font: { size: 14 }
+                  }
+                },
+                x: {
+                  ticks: {
+                    color: '#d6b3ff',
+                    font: { size: 14 }
+                  }
+                }
+              },
+              plugins: {
+                legend: {
+                  display: false
+                },
+                tooltip: {
+                  backgroundColor: '#252836',
+                  titleColor: '#b2ffd6',
+                  bodyColor: '#ffffff',
+                  borderColor: '#b3e5ff',
+                  borderWidth: 1
+                }
+              }
+            }
+          });
+        } else {
+          tipoChart.data.labels = tiposLabels;
+          tipoChart.data.datasets[0].data = tiposCounts;
+          tipoChart.update();
+        }
+      } catch (err) {
+        console.error('Error cargando estadísticas:', err);
+      }
+    }
+
+    fetchEstadisticas();
+    setInterval(fetchEstadisticas, 10000);
+  </script>
+</body>
+</html>

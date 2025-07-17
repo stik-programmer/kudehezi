@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Configuración</title>
+
+  <!-- FontAwesome 6.4 CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+  <!-- Tu CSS principal -->
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+  <!-- Usuario y logout -->
+  <div class="user-info">
+    <span>Bienvenido, <%= user.name || user.username %></span>
+    <a href="/logout" class="logout-btn" title="Cerrar sesión">
+      <i class="fas fa-sign-out-alt"></i>
+    </a>
+  </div>
+
+  <!-- Barra lateral -->
+  <div class="sidebar">
+    <a href="/panel" class="icon <%= activePage === 'panel' ? 'active' : '' %>" title="Panel">
+      <i class="fas fa-table"></i>
+    </a>
+    <a href="/estadisticas" class="icon <%= activePage === 'estadisticas' ? 'active' : '' %>" title="Estadísticas">
+      <i class="fas fa-chart-bar"></i>
+    </a>
+    <a href="/configuracion" class="icon <%= activePage === 'configuracion' ? 'active' : '' %>" title="Configuración">
+      <i class="fas fa-cog"></i>
+    </a>
+  </div>
+
+  <!-- Contenido principal -->
+  <div class="main-content">
+    <div class="header">
+      <h1>Configuración del Sistema</h1>
+    </div>
+
+    <!-- Formulario -->
+    <form id="formConfiguracion" class="form-config">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="colorFondo">
+            <i class="fas fa-palette"></i> Color de Fondo
+          </label>
+        <input
+  type="color"
+  id="colorFondo"
+  name="color"
+  value="#8a2be2"  <!-- Un color morado visible -->
+  aria-label="Seleccionar color de fondo"
+/>
+          <p class="hint">Selecciona un color para el fondo del sistema.</p>
+        </div>    
+          >
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <button type="button" id="guardarConfiguracion" class="btn-primary">
+          <i class="fas fa-save"></i> Guardar Configuración
+        </button>
+      </div>
+    </form>
+
+    <div id="mensajeGuardado" style="margin-top: 10px; color: #6af; font-weight: bold;"></div>
+  </div>
+
+  <!-- Script para guardar configuración -->
+  <script>
+    const btnGuardar = document.getElementById('guardarConfiguracion');
+    const mensaje = document.getElementById('mensajeGuardado');
+
+    btnGuardar.addEventListener('click', async () => {
+      btnGuardar.disabled = true;
+      mensaje.textContent = '';
+
+      const color = document.getElementById('colorFondo').value;
+
+      try {
+        const res = await fetch('/api/configuracion', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ color })
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+          mensaje.textContent = 'Configuración guardada con éxito.';
+        } else {
+          mensaje.textContent = 'Error al guardar configuración.';
+        }
+      } catch (err) {
+        mensaje.textContent = 'Error de red al guardar configuración.';
+      } finally {
+        btnGuardar.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
