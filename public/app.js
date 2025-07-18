@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   configurarEventos();
 });
 
+
 async function aplicarConfiguracionUsuario() {
   try {
     const res = await fetch('/api/configuracion');

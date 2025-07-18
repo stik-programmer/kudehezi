@@ -6,7 +6,10 @@
   <title><%= title %></title>
   <link rel="stylesheet" href="/style.css" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
 </head>
 <body>
   <div class="sidebar">
@@ -26,88 +29,162 @@
       Estadísticas de Acciones
     </h1>
 
+    <!-- Filtro de fecha mejorado con rango -->
+    <div style="text-align: left; margin-left: 30px; margin-bottom: 30px; display: flex; gap: 15px;">
+      <div>
+        <span style="color: #b3e5ff; margin-right: 5px;">Desde:</span>
+        <input id="startDate" type="text" placeholder="Fecha inicio" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #555; width: 150px; font-size: 14px;">
+      </div>
+      <div>
+        <span style="color: #b3e5ff; margin-right: 5px;">Hasta:</span>
+        <input id="endDate" type="text" placeholder="Fecha fin" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #555; width: 150px; font-size: 14px;">
+      </div>
+      <button id="filterBtn" style="padding: 6px 12px; border-radius: 8px; background: #00c49f; color: white; border: none; cursor: pointer;">
+        <i class="fas fa-filter"></i> Filtrar
+      </button>
+    </div>
+
+    <!-- Acciones por Estado con porcentajes en la tarta -->
     <section class="stats-section">
       <h2 style="text-align: center; font-size: 1.8em; margin-bottom: 20px; color: #d6b3ff;">
         Acciones por Estado
       </h2>
-      <canvas id="estadoChart" style="max-width: 500px; max-height: 500px; margin: 0 auto; display: block;"></canvas>
+      <div style="width: 500px; height: 500px; margin: 0 auto;">
+        <canvas id="estadoChart"></canvas>
+      </div>
     </section>
 
+    <!-- Acciones por Tipo con más detalles -->
     <section class="stats-section">
       <h2 style="text-align: center; font-size: 1.8em; margin: 40px 0 20px; color: #d6b3ff;">
         Acciones por Tipo
       </h2>
-      <canvas id="tipoChart" style="max-width: 700px; max-height: 400px; margin: 0 auto; display: block;"></canvas>
+      <div style="width: 700px; height: 400px; margin: 0 auto;">
+        <canvas id="tipoChart"></canvas>
+      </div>
+
+      <!-- Tabla profesional con más detalles -->
+      <div style="margin: 30px auto; max-width: 700px;">
+        <table style="width: 100%; border-collapse: collapse; color: #fff; font-size: 15px;">
+          <thead style="background-color: #333;">
+            <tr>
+              <th style="padding: 10px;">Tipo</th>
+              <th style="padding: 10px;">Total</th>
+              <th style="padding: 10px;">Porcentaje</th>
+              <th style="padding: 10px;">Tendencia</th>
+              <th style="padding: 10px;">Última semana</th>
+            </tr>
+          </thead>
+          <tbody id="tipoTableBody" style="background-color: #222;"></tbody>
+        </table>
+      </div>
     </section>
   </div>
 
   <script>
+    // Registrar el plugin de datalabels para los porcentajes
+    Chart.register(ChartDataLabels);
+    
     const ctxEstado = document.getElementById('estadoChart').getContext('2d');
     const ctxTipo = document.getElementById('tipoChart').getContext('2d');
+    const tableBody = document.getElementById('tipoTableBody');
+    const startDateInput = document.getElementById('startDate');
+    const endDateInput = document.getElementById('endDate');
+    const filterBtn = document.getElementById('filterBtn');
 
     let estadoChart = null;
     let tipoChart = null;
 
+    // Configurar datepickers con rango
+    flatpickr("#startDate", {
+      dateFormat: "Y-m-d",
+      defaultDate: new Date(new Date().setDate(new Date().getDate() - 30))
+    });
+    
+    flatpickr("#endDate", {
+      dateFormat: "Y-m-d",
+      defaultDate: new Date()
+    });
+
     async function fetchEstadisticas() {
       try {
-        const res = await fetch('/api/estadisticas');
+        const startDate = startDateInput.value;
+        const endDate = endDateInput.value;
+        
+        const res = await fetch(`/api/estadisticas?start=${startDate}&end=${endDate}`);
         const data = await res.json();
 
+        // Estados - con porcentajes dentro de la tarta
+        const totalEstados = data.estados.reduce((sum, e) => sum + e.count, 0);
         const estadosLabels = data.estados.map(e => e._id || 'Sin estado');
         const estadosCounts = data.estados.map(e => e.count);
+        const estadosPorcentajes = data.estados.map(e => ((e.count / totalEstados) * 100).toFixed(1) + '%');
 
+        // Tipos - con más detalles
+        const totalTipos = data.tipos.reduce((sum, t) => sum + t.count, 0);
         const tiposLabels = data.tipos.map(t => t._id || 'Sin tipo');
         const tiposCounts = data.tipos.map(t => t.count);
+        const tiposPorcentajes = data.tipos.map(t => ((t.count / totalTipos) * 100).toFixed(1));
+        const tiposTendencias = data.tipos.map(t => t.trend || 0);
+        const tiposUltimaSemana = data.tipos.map(t => t.last_week || 0);
 
+        // Doughnut Chart con porcentajes dentro de cada segmento
         if (!estadoChart) {
           estadoChart = new Chart(ctxEstado, {
             type: 'doughnut',
             data: {
               labels: estadosLabels,
               datasets: [{
-                label: 'Acciones por Estado',
                 data: estadosCounts,
-                backgroundColor: [
-                  '#b3e5ff',
-                  '#b2ffd6',
-                  '#d6b3ff',
-                  '#ff6f91',
-                  '#6c757d'
-                ].slice(0, estadosLabels.length),
+                backgroundColor: ['#b3e5ff', '#b2ffd6', '#d6b3ff', '#ff6f91', '#6c757d'],
                 borderColor: '#1a2a2f',
                 borderWidth: 2,
               }]
             },
             options: {
               responsive: true,
+              maintainAspectRatio: false,
               cutout: '55%',
               plugins: {
                 legend: {
-                  position: 'bottom',
+                  position: 'right',
                   labels: {
                     color: '#b3e5ff',
-                    font: { size: 16 }
+                    font: { size: 14 }
                   }
                 },
                 tooltip: {
+                  callbacks: {
+                    label: (tooltipItem) => {
+                      const value = tooltipItem.raw;
+                      const index = tooltipItem.dataIndex;
+                      return `${estadosLabels[index]}: ${value} (${estadosPorcentajes[index]})`;
+                    }
+                  },
                   backgroundColor: '#252836',
                   titleColor: '#b2ffd6',
                   bodyColor: '#ffffff',
                   borderColor: '#b3e5ff',
                   borderWidth: 1,
+                },
+                datalabels: {
+                  color: 'black',
+                  font: { weight: 'bold' },
+                  formatter: (value, ctx) => {
+                    return estadosPorcentajes[ctx.dataIndex];
+                  }
                 }
               }
-            }
+            },
+            plugins: [ChartDataLabels]
           });
         } else {
           estadoChart.data.labels = estadosLabels;
           estadoChart.data.datasets[0].data = estadosCounts;
-          estadoChart.data.datasets[0].backgroundColor = [
-            '#b3e5ff', '#b2ffd6', '#d6b3ff', '#ff6f91', '#6c757d'
-          ].slice(0, estadosLabels.length);
           estadoChart.update();
         }
 
+        // Bar Chart con más detalles
         if (!tipoChart) {
           tipoChart = new Chart(ctxTipo, {
             type: 'bar',
@@ -116,51 +193,103 @@
               datasets: [{
                 label: 'Acciones por Tipo',
                 data: tiposCounts,
-                backgroundColor: '#6f42c1',
+                backgroundColor: tiposCounts.map(count =>
+                  count > 15 ? '#00c49f' : count > 8 ? '#f9c74f' : '#f94144'
+                ),
                 borderWidth: 1
               }]
             },
             options: {
               responsive: true,
+              maintainAspectRatio: false,
               scales: {
                 y: {
                   beginAtZero: true,
-                  ticks: {
-                    color: '#b3e5ff',
-                    font: { size: 14 }
-                  }
+                  ticks: { 
+                    color: '#b3e5ff', 
+                    font: { size: 14 },
+                    callback: function(value) {
+                      return value % 1 === 0 ? value : '';
+                    }
+                  },
+                  grid: { color: 'rgba(255,255,255,0.1)' }
                 },
                 x: {
-                  ticks: {
-                    color: '#d6b3ff',
-                    font: { size: 14 }
-                  }
+                  ticks: { 
+                    color: '#d6b3ff', 
+                    font: { size: 14 },
+                    maxRotation: 45,
+                    minRotation: 45
+                  },
+                  grid: { display: false }
                 }
               },
               plugins: {
-                legend: {
-                  display: false
-                },
+                legend: { display: false },
                 tooltip: {
+                  callbacks: {
+                    label: (tooltipItem) => {
+                      const index = tooltipItem.dataIndex;
+                      return `${tiposLabels[index]}: ${tiposCounts[index]} (${tiposPorcentajes[index]}%)`;
+                    }
+                  },
                   backgroundColor: '#252836',
                   titleColor: '#b2ffd6',
                   bodyColor: '#ffffff',
                   borderColor: '#b3e5ff',
-                  borderWidth: 1
+                  borderWidth: 2
+                },
+                datalabels: {
+                  anchor: 'end',
+                  align: 'top',
+                  color: '#ffffff',
+                  font: { weight: 'bold' },
+                  formatter: (value) => {
+                    return value;
+                  }
                 }
               }
-            }
+            },
+            plugins: [ChartDataLabels]
           });
         } else {
           tipoChart.data.labels = tiposLabels;
           tipoChart.data.datasets[0].data = tiposCounts;
+          tipoChart.data.datasets[0].backgroundColor = tiposCounts.map(count =>
+            count > 15 ? '#00c49f' : count > 8 ? '#f9c74f' : '#f94144'
+          );
           tipoChart.update();
         }
+
+        // Actualizar tabla con más detalles
+        tableBody.innerHTML = '';
+        data.tipos.forEach((tipo, i) => {
+          const trendIcon = tiposTendencias[i] > 0 ? 
+            '<i class="fas fa-arrow-up" style="color: #00c49f;"></i>' : 
+            tiposTendencias[i] < 0 ? 
+            '<i class="fas fa-arrow-down" style="color: #f94144;"></i>' : 
+            '<i class="fas fa-minus" style="color: #b3e5ff;"></i>';
+            
+          tableBody.innerHTML += `
+            <tr>
+              <td style="padding: 10px; border-bottom: 1px solid #333;">${tipo._id || 'Sin tipo'}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #333; text-align: center;">${tipo.count}</td>
+              <td style="padding: 10px; border-bottom: 1px solid #333; text-align: center;">${tiposPorcentajes[i]}%</td>
+              <td style="padding: 10px; border-bottom: 1px solid #333; text-align: center;">${trendIcon} ${Math.abs(tiposTendencias[i])}%</td>
+              <td style="padding: 10px; border-bottom: 1px solid #333; text-align: center;">${tiposUltimaSemana[i]}</td>
+            </tr>
+          `;
+        });
+
       } catch (err) {
         console.error('Error cargando estadísticas:', err);
       }
     }
 
+    // Event listeners
+    filterBtn.addEventListener('click', fetchEstadisticas);
+    
+    // Carga inicial
     fetchEstadisticas();
     setInterval(fetchEstadisticas, 10000);
   </script>
